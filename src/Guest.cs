@@ -68,6 +68,7 @@ namespace CashShuffle
 
         private async Task SendBlameAsync(Reason reason)
         {
+            Console.WriteLine("Guest behaved badly, sending blame message.");
             Packet p = new Packet();
             p.Message = new Message();
             p.Message.Blame = new Blame();

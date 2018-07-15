@@ -35,7 +35,7 @@ namespace CashShuffle
         public async Task SendPacketAsync(Packet packet)
         {
             string packetStr = _jsonFormatter.Format(packet);
-            byte[] payload = new byte[packetStr.Length + 3];
+            byte[] payload = new byte[packetStr.Length + StopSymbol.Length];
             Encoding.ASCII.GetBytes(packetStr).CopyTo(payload, 0);
             payload[payload.Length - 3] = StopSymbol[0];
             payload[payload.Length - 2] = StopSymbol[1];
@@ -47,7 +47,7 @@ namespace CashShuffle
         {
             while (!_shutdownRequested.IsCancellationRequested)
             {
-                int read = 0;
+                int read;
                 try
                 {
                     read = await _stream.ReadAsync(_buffer, 0, _buffer.Length, _shutdownRequested);
@@ -62,12 +62,15 @@ namespace CashShuffle
 
                 try
                 {
-                    int endOfPacket = FindStopSymbol(_buffer, 0, read);
-
-                    string packet = Encoding.ASCII.GetString(_buffer, 0, endOfPacket);
-
-                    Packet p = _jsonParser.Parse<Packet>(packet);
-                    OnReceived(this, p);
+                    int endOfPacket;
+                    int offset = 0;
+                    while ((endOfPacket = FindStopSymbol(_buffer, offset, read)) > 0)
+                    {
+                        string packet = Encoding.ASCII.GetString(_buffer, offset, endOfPacket - offset);
+                        Packet p = _jsonParser.Parse<Packet>(packet);
+                        OnReceived(this, p);
+                        offset += endOfPacket + StopSymbol.Length;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -101,14 +104,13 @@ namespace CashShuffle
         private int FindStopSymbol(byte[] buffer, int offset, int readCount)
         {
             int endOfPacket = -1;
-            for (int i = 0; i < readCount; i++)
+            for (int i = offset; i < readCount; i++)
             {
                 if (_buffer[i] == StopSymbol[0] && i + 1 < readCount && _buffer[i + 1] == StopSymbol[1] && i + 2 < readCount && _buffer[i + 2] == StopSymbol[2])
                 {
                     // found stop symbol
                     endOfPacket = i;
-                    if (endOfPacket + 3 == readCount)
-                        break; // TODO: handle multiple packets in one buffer
+                    break;
                 }
             }
             return endOfPacket;
