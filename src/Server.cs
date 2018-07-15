@@ -16,13 +16,15 @@ namespace CashShuffle
         private TcpListener _listener;
         private List<Pool> _pools;
         private CancellationTokenSource _shutdownRequested;
+        private int _poolCapacity;
 
-        public Server(string certificatePath, int port = 8080)
+        public Server(string certificatePath, int port = 8080, int poolCapacity = 5)
         {
             this._serverCertificate = new X509Certificate2(certificatePath);
             this._listener = new TcpListener(IPAddress.Any, port);
             this._pools = new List<Pool>();
             this._shutdownRequested = new CancellationTokenSource();
+            this._poolCapacity = poolCapacity;
         }
 
         public async Task StartAsync()
@@ -60,7 +62,7 @@ namespace CashShuffle
                 }
             }
 
-            Pool newPool = new Pool(_shutdownRequested.Token);
+            Pool newPool = new Pool(_shutdownRequested.Token, _poolCapacity);
             AddPool(newPool);
             return newPool;
         }

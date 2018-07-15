@@ -15,7 +15,7 @@ namespace CashShuffle
         public int PoolCapacity { get; private set; }
         public int PoolSize { get { return _guests.Count; } }
 
-        public Pool(CancellationToken shutdownRequested, int poolCapacity = 5)
+        public Pool(CancellationToken shutdownRequested, int poolCapacity)
         {
             this._guests = new List<Guest>();
             this._shutdownRequested = shutdownRequested;

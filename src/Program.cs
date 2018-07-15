@@ -9,17 +9,19 @@ namespace CashShuffle
 {
     public class Program
     {
-        static private string certPath = null;
-        static private bool showHelp = false;
-        static private int poolSize = 5;
+        private static string certPath = null;
+        private static int serverPort = 8080;
+        private static int poolCapacity = 5;
+        private static bool showHelp = false;
 
-        static OptionSet options = new OptionSet {
+        private static OptionSet options = new OptionSet {
             { "c|certificate=", "Path to certificate file in PFX format.", (string c) => certPath = c },
-            { "s|size=", "Pool size (default 5).", (int s) => poolSize = s },
+            { "p|port=", "Server port (default 8080).", (int p) => serverPort = p },
+            { "s|size=", "Pool size (default 5).", (int s) => poolCapacity = s },
             { "h|help", "Show help information.", h => { if (h != null) ShowHelp(); } }
         };
 
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             try
             {
@@ -28,7 +30,7 @@ namespace CashShuffle
                 if (certPath == null) throw new OptionException("Path to certificate is required.", "certificate");
 
                 Console.WriteLine("Starting CashShuffle server...");
-                Server s = new Server(certPath);
+                Server s = new Server(certPath, serverPort, poolCapacity);
                 s.StartAsync();
                 Console.ReadLine();
                 s.Stop();
@@ -42,7 +44,7 @@ namespace CashShuffle
             }
         }
 
-        static void ShowHelp()
+        private static void ShowHelp()
         {
             Console.WriteLine("Usage: dotnet run -- [OPTIONS]");
             options.WriteOptionDescriptions(Console.Out);
