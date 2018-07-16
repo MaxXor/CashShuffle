@@ -83,7 +83,7 @@ namespace CashShuffle
 
         public void Close()
         {
-            _stream.Close();
+            _stream.Dispose();
             OnClosed(this);
         }
 

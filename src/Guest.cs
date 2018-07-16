@@ -62,7 +62,7 @@ namespace CashShuffle
 
         public void Disconnect()
         {
-            _client.Close();
+            _client.Dispose();
         }
 
         private async void StartNewRoundAsync(Pool sender)

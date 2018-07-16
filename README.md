@@ -4,13 +4,14 @@ Implementation of the [CashShuffle](https://cashshuffle.com) protocol for privac
 
 ## Supported runtimes
 
-- .NET Core 2.1+
+- .NET Core 1.0+
+- .NET Framework 4.6+
 
 ## Compile
 
-Switch to the `src` directory and run:
+Compile with Visual Studio or switch to the `src` directory and run:
 
-`dotnet build`
+`dotnet build -f netcoreapp1.0`
 
 ## Usage
 
