@@ -12,7 +12,6 @@ namespace CashShuffle
         private static string certPath = null;
         private static int serverPort = 8080;
         private static int poolCapacity = 5;
-        private static bool showHelp = false;
 
         private static OptionSet options = new OptionSet {
             { "c|certificate=", "Path to certificate file in PFX format.", (string c) => certPath = c },

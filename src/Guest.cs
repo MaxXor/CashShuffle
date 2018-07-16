@@ -20,17 +20,18 @@ namespace CashShuffle
         public delegate void DisconnectedEventHandler(Guest sender);
         public event ForwardEventHandler Forward;
         public delegate void ForwardEventHandler(string receiverKey, Guest sender, Packet packet);
+        public event VerifiedEventHandler Verified;
+        public delegate void VerifiedEventHandler(string verificationKey, Guest sender);
+        public event BanRequestEventHandler BanRequest;
+        public delegate void BanRequestEventHandler(string verificationKey, Guest sender);
         public string VerificationKey { get; set; }
         public ulong Amount { get; set; }
         public Guid SessionGuid { get; private set; }
         public uint GuestNumber { get; set; }
 
-        public Guest(Pool pool, TcpClient client, SslStream stream, CancellationToken shutdownRequested, uint guestNumber)
+        public Guest(TcpClient client, SslStream stream, CancellationToken shutdownRequested)
         {
             this.SessionGuid = Guid.NewGuid();
-            this.GuestNumber = guestNumber;
-            this._pool = pool;
-            this._pool.NewRound += StartNewRoundAsync;
             this._client = client;
             this._communicator = new Communicator(stream, shutdownRequested);
             this._communicator.Received += ProcessPacketAsync;
@@ -40,9 +41,18 @@ namespace CashShuffle
 
         private void CommunicatorClosed(Communicator Communicator)
         {
-            _pool.NewRound -= StartNewRoundAsync;
+            if (_pool != null)
+                _pool.NewRound -= StartNewRoundAsync;
             OnDisconnected(this);
             Disconnect();
+        }
+
+        public void AddPool(Pool pool)
+        {
+            _pool = pool;
+            _pool.NewRound += StartNewRoundAsync;
+            GuestNumber = (uint)_pool.PoolSize + 1;
+            _pool.AddGuest(this);
         }
 
         public async Task SendAsync(Packet p)
@@ -90,6 +100,20 @@ namespace CashShuffle
                 handler(receiverKey, sender, packet);
         }
 
+        private void OnVerified(string verificationKey, Guest sender)
+        {
+            var handler = Verified;
+            if (handler != null)
+                handler(verificationKey, sender);
+        }
+
+        private void OnBanRequest(string verificationKey, Guest sender)
+        {
+            var handler = BanRequest;
+            if (handler != null)
+                handler(verificationKey, sender);
+        }
+
         private async void ProcessPacketAsync(Communicator sender, Packet packet)
         {
             try
@@ -98,6 +122,7 @@ namespace CashShuffle
                 {
                     VerificationKey = packet.FromKey.Key;
                     Amount = packet.Registration.Amount;
+                    OnVerified(VerificationKey, this);
 
                     Packet p = new Packet();
                     p.Session = ByteString.CopyFrom(SessionGuid.ToString(), Encoding.ASCII);
@@ -113,7 +138,16 @@ namespace CashShuffle
                     return;
                 }
 
-                OnForward(packet.ToKey.Key, this, packet);
+                if (packet.Phase == Phase.Blame && packet.Message?.Blame?.Reason == Reason.Liar)
+                {
+                    string verificationKey = packet.Message?.Blame?.Accused?.Key;
+                    if (!string.IsNullOrEmpty(verificationKey))
+                    {
+                        OnBanRequest(verificationKey, this);
+                    }
+                }
+
+                OnForward(packet.ToKey?.Key, this, packet);
             }
             catch (Exception ex)
             {

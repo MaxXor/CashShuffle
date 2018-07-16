@@ -40,9 +40,8 @@ namespace CashShuffle
                     SslStream sslStream = new SslStream(client.GetStream(), false);
                     await sslStream.AuthenticateAsServerAsync(_serverCertificate, false, SslProtocols.Tls12, false);
 
-                    Pool pool = GetPool();
-                    Guest guest = new Guest(pool, client, sslStream, _shutdownRequested.Token, (uint)pool.PoolSize + 1);
-                    pool.AddGuest(guest);
+                    Guest guest = new Guest(client, sslStream, _shutdownRequested.Token);
+                    guest.Verified += GuestVerified;
                 }
                 catch (Exception ex) when (!(ex is ObjectDisposedException || ex is AuthenticationException))
                 {
@@ -50,6 +49,14 @@ namespace CashShuffle
                     return;
                 }
             }
+        }
+
+        private void GuestVerified(string verificationKey, Guest sender)
+        {
+            Console.WriteLine("Received verification key from guest.");
+            sender.Verified -= GuestVerified;
+            Pool pool = GetPool();
+            sender.AddPool(pool);
         }
 
         private Pool GetPool()
